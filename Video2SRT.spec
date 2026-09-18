@@ -2,7 +2,7 @@
 from PyInstaller.utils.hooks import collect_all
 
 datas, binaries, hiddenimports = [], [], []
-for package in ("faster_whisper", "ctranslate2", "huggingface_hub", "tokenizers", "av", "psutil", "nvidia"):
+for package in ("faster_whisper", "ctranslate2", "huggingface_hub", "tokenizers", "av", "psutil", "truststore", "nvidia"):
     d, b, h = collect_all(package)
     datas += d; binaries += b; hiddenimports += h
 

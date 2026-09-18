@@ -12,6 +12,7 @@ for package in (
     "tokenizers",
     "av",
     "psutil",
+    "truststore",
 ):
     package_datas, package_binaries, package_hiddenimports = collect_all(package)
     datas += package_datas

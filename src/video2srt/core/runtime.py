@@ -7,6 +7,24 @@ from pathlib import Path
 _DLL_HANDLES: list[object] = []
 
 
+def configure_headless_network_clients() -> None:
+    """Prevent CLI progress writers from using missing stderr in windowed builds."""
+    os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+
+
+def configure_system_certificates() -> bool:
+    """Make HTTPS clients use the native Windows certificate store."""
+    if sys.platform != "win32":
+        return False
+    try:
+        import truststore
+
+        truststore.inject_into_ssl()
+        return True
+    except (ImportError, OSError):
+        return False
+
+
 def configure_nvidia_dll_search() -> None:
     """Expose bundled NVIDIA redistributables without editing the user's PATH."""
     if sys.platform != "win32":

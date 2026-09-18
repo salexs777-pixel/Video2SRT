@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 
 from PySide6.QtCore import QObject, QRunnable, Signal, Slot
@@ -25,4 +26,5 @@ class TaskWorker(QRunnable):
         except InterruptedError:
             self.signals.failed.emit("Обработка отменена.")
         except Exception as exc:
+            logging.getLogger("video2srt").exception("Background task failed")
             self.signals.failed.emit(str(exc) or "Неизвестная ошибка")
