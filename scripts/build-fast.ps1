@@ -32,8 +32,9 @@ New-Item -ItemType Directory -Force "$PortableRoot\bin", "$PortableRoot\config",
 Copy-Item -LiteralPath "bin\ffmpeg.exe", "bin\ffprobe.exe" -Destination "$PortableRoot\bin" -Force
 Copy-Item -LiteralPath "config\glossary.txt" -Destination "$PortableRoot\config\glossary.txt" -Force
 Copy-Item -LiteralPath "README.md", "THIRD_PARTY_LICENSES" -Destination $PortableRoot -Force
+Copy-Item -LiteralPath "config\CPU_ONLY_DEBUG.marker" -Destination "$PortableRoot\CPU_ONLY_DEBUG" -Force
 
-$Archive = "dist\Video2SRT-Debug-0.1.1.zip"
+$Archive = "dist\Video2SRT-Debug-0.1.2.zip"
 if (Test-Path $Archive) { Remove-Item -LiteralPath $Archive }
 Compress-Archive -LiteralPath $PortableRoot -DestinationPath $Archive -CompressionLevel Fastest
 Write-Host "Debug archive: $Archive"

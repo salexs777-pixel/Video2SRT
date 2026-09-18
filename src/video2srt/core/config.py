@@ -69,3 +69,18 @@ def save_config(config: AppConfig, path: Path) -> None:
     temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(asdict(config), ensure_ascii=False, indent=2), encoding="utf-8")
     temporary.replace(path)
+
+
+def apply_cpu_only_debug_profile(config: AppConfig, cpu_threads: int) -> None:
+    """Force a deterministic profile for builds that intentionally omit CUDA."""
+    config.first_run_complete = True
+    config.hardware.cuda_available = False
+    config.hardware.nvenc_available = False
+    config.whisper = WhisperConfig(
+        mode="auto",
+        model="small",
+        device="cpu",
+        compute_type="int8",
+        cpu_threads=max(1, cpu_threads),
+    )
+    config.video = VideoConfig(encoder="libx264")

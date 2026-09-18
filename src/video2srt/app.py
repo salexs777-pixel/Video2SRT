@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import traceback
@@ -8,7 +9,7 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from video2srt import __version__
-from video2srt.core.config import load_config
+from video2srt.core.config import apply_cpu_only_debug_profile, load_config, save_config
 from video2srt.core.logging import setup_logging
 from video2srt.core.paths import discover_paths
 from video2srt.core.pipeline import Pipeline
@@ -47,6 +48,10 @@ def main() -> int:
     app.setApplicationName("Video2SRT")
     try:
         config = load_config(paths.config / "config.json")
+        if (paths.root / "CPU_ONLY_DEBUG").exists():
+            apply_cpu_only_debug_profile(config, min(8, os.cpu_count() or 2))
+            save_config(config, paths.config / "config.json")
+            logger.info("CPU-only debug marker detected; forcing small/cpu/int8/libx264")
         window = MainWindow(paths, config, Pipeline(paths, config, logger))
         window.show()
         return app.exec()

@@ -1,6 +1,13 @@
 from pathlib import Path
 
-from video2srt.core.config import AppConfig, HardwareConfig, load_config, save_config
+from video2srt.core.config import (
+    AppConfig,
+    HardwareConfig,
+    WhisperConfig,
+    apply_cpu_only_debug_profile,
+    load_config,
+    save_config,
+)
 
 
 def test_config_round_trip(tmp_path: Path):
@@ -17,3 +24,21 @@ def test_bad_config_returns_defaults(tmp_path: Path):
     path = tmp_path / "config.json"
     path.write_text("not json", encoding="utf-8")
     assert load_config(path) == AppConfig()
+
+
+def test_cpu_debug_profile_overrides_saved_gpu_profile():
+    config = AppConfig(
+        first_run_complete=False,
+        hardware=HardwareConfig(cuda_available=True, nvenc_available=True),
+        whisper=WhisperConfig(model="large-v3", device="cuda", compute_type="int8_float16"),
+    )
+
+    apply_cpu_only_debug_profile(config, 6)
+
+    assert config.first_run_complete
+    assert not config.hardware.cuda_available
+    assert not config.hardware.nvenc_available
+    assert config.whisper == WhisperConfig(
+        mode="auto", model="small", device="cpu", compute_type="int8", cpu_threads=6
+    )
+    assert config.video.encoder == "libx264"

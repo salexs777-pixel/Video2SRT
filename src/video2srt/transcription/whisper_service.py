@@ -34,28 +34,29 @@ class WhisperService:
                 cpu_threads=self.config.cpu_threads,
                 local_files_only=True,
             )
+            segments, _ = model.transcribe(
+                str(media),
+                language="ru",
+                vad_filter=True,
+                word_timestamps=True,
+                initial_prompt=glossary,
+                beam_size=5,
+            )
+            words: list[Word] = []
+            for segment in segments:
+                if cancel.is_set():
+                    raise InterruptedError("Обработка отменена")
+                if segment.words:
+                    words.extend(
+                        Word(word.word.strip(), float(word.start), float(word.end))
+                        for word in segment.words
+                        if word.word.strip()
+                    )
+                progress(min(1.0, float(segment.end) / duration) if duration else 0.0)
+            return segment_words(words)
+        except InterruptedError:
+            raise
         except Exception as exc:
             if self.config.device == "cuda":
                 raise RuntimeError("GPU_BACKEND_FAILED") from exc
             raise RuntimeError("Не удалось загрузить локальную модель распознавания.") from exc
-
-        segments, _ = model.transcribe(
-            str(media),
-            language="ru",
-            vad_filter=True,
-            word_timestamps=True,
-            initial_prompt=glossary,
-            beam_size=5,
-        )
-        words: list[Word] = []
-        for segment in segments:
-            if cancel.is_set():
-                raise InterruptedError("Обработка отменена")
-            if segment.words:
-                words.extend(
-                    Word(word.word.strip(), float(word.start), float(word.end))
-                    for word in segment.words
-                    if word.word.strip()
-                )
-            progress(min(1.0, float(segment.end) / duration) if duration else 0.0)
-        return segment_words(words)
