@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m ruff check src tests
+      - run: python -m pytest
+
+  windows-installer:
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - name: Download and verify FFmpeg
+        shell: pwsh
+        run: scripts/fetch_ffmpeg.ps1
+      - run: python -m PyInstaller --noconfirm --clean Video2SRT.spec
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+      - name: Build installer
+        run: iscc installer/Video2SRT.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Video2SRT-Setup-0.1.0
+          path: installer/output/Video2SRT-Setup-0.1.0.exe
+          if-no-files-found: error
+
