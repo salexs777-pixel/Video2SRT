@@ -1,0 +1,32 @@
+Video2SRT third-party notices
+=============================
+
+The installer distributes or uses the following independent components. Their
+licenses remain with their respective copyright holders.
+
+FFmpeg (including libass), GPL v3 or later build
+  Project and corresponding source: https://ffmpeg.org/
+  Windows build provider: https://www.gyan.dev/ffmpeg/builds/
+  License: https://ffmpeg.org/legal.html
+
+PySide6 / Qt for Python, LGPL v3 / GPL v3 / commercial
+  Source and license: https://code.qt.io/cgit/pyside/pyside-setup.git/
+
+faster-whisper, MIT
+  https://github.com/SYSTRAN/faster-whisper
+
+CTranslate2, MIT
+  https://github.com/OpenNMT/CTranslate2
+
+NVIDIA CUDA cuBLAS and cuDNN redistributable libraries
+  https://docs.nvidia.com/cuda/eula/
+  https://docs.nvidia.com/deeplearning/cudnn/backend/latest/reference/support-matrix.html
+
+huggingface_hub, Apache License 2.0
+  https://github.com/huggingface/huggingface_hub
+
+psutil, BSD-3-Clause
+  https://github.com/giampaolo/psutil
+
+Whisper model files are downloaded separately on explicit user confirmation.
+Model repository cards contain their applicable notices and license terms.
