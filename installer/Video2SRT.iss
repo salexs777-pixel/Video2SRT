@@ -23,10 +23,10 @@ LicenseFile=..\LICENSE
 Name: "desktopicon"; Description: "Создать ярлык на рабочем столе"; GroupDescription: "Дополнительно:"; Flags: unchecked
 
 [Dirs]
-Name: "{app}\models"
-Name: "{app}\logs"
-Name: "{app}\output"
-Name: "{app}\config"
+Name: "{app}\models"; Permissions: users-modify
+Name: "{app}\logs"; Permissions: users-modify
+Name: "{app}\output"; Permissions: users-modify
+Name: "{app}\config"; Permissions: users-modify
 
 [Files]
 Source: "..\dist\Video2SRT\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
