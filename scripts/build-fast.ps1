@@ -34,7 +34,7 @@ Copy-Item -LiteralPath "config\glossary.txt" -Destination "$PortableRoot\config\
 Copy-Item -LiteralPath "README.md", "THIRD_PARTY_LICENSES" -Destination $PortableRoot -Force
 Copy-Item -LiteralPath "config\CPU_ONLY_DEBUG.marker" -Destination "$PortableRoot\CPU_ONLY_DEBUG" -Force
 
-$Archive = "dist\Video2SRT-Debug-0.1.2.zip"
+$Archive = "dist\Video2SRT-Debug-0.1.3.zip"
 if (Test-Path $Archive) { Remove-Item -LiteralPath $Archive }
 Compress-Archive -LiteralPath $PortableRoot -DestinationPath $Archive -CompressionLevel Fastest
 Write-Host "Debug archive: $Archive"

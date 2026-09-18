@@ -1,6 +1,10 @@
+import io
+from collections.abc import Callable
 from pathlib import Path
+from threading import Event
+from unittest.mock import patch
 
-from video2srt.video.ffmpeg_service import build_command, escape_filter_path
+from video2srt.video.ffmpeg_service import build_command, encode, escape_filter_path
 from video2srt.video.profiles import encoder_args, scale_filter
 
 
@@ -37,3 +41,60 @@ def test_windows_filter_path_is_escaped():
     escaped = escape_filter_path(Path("C:/A Folder/test.ass"))
     assert r"C\:" in escaped
     assert "A Folder" in escaped
+
+
+class FakeProcess:
+    def __init__(self, stdout: str, returncode: int = 0, complete_on_eof: bool = True):
+        self.stdout = io.StringIO(stdout)
+        self.stderr = io.StringIO("")
+        self.returncode: int | None = None
+        self._final_returncode = returncode
+        self.complete_on_eof = complete_on_eof
+        self.terminated = False
+
+    def poll(self) -> int | None:
+        if self.complete_on_eof and self.stdout.tell() == len(self.stdout.getvalue()):
+            self.returncode = self._final_returncode
+        return self.returncode
+
+    def wait(self, timeout: float | None = None) -> int:
+        self.returncode = self._final_returncode
+        return self.returncode
+
+    def terminate(self) -> None:
+        self.terminated = True
+        self.returncode = -1
+
+    def kill(self) -> None:
+        self.returncode = -9
+
+
+def run_fake_encode(fake: FakeProcess, progress: Callable[[float], None]) -> None:
+    with patch("video2srt.video.ffmpeg_service.subprocess.Popen", return_value=fake):
+        encode(["ffmpeg"], 2.0, progress, Event())
+
+
+def test_encode_ignores_na_progress_and_waits_for_ffmpeg():
+    fake = FakeProcess("out_time_us=N/A\nout_time_us=1000000\nprogress=end\n")
+    updates: list[float] = []
+
+    run_fake_encode(fake, updates.append)
+
+    assert fake.returncode == 0
+    assert updates == [0.5, 1.0]
+
+
+def test_encode_stops_ffmpeg_when_progress_callback_fails():
+    fake = FakeProcess("out_time_us=1000000\n", complete_on_eof=False)
+
+    def fail(_value: float) -> None:
+        raise RuntimeError("callback deleted")
+
+    try:
+        run_fake_encode(fake, fail)
+    except RuntimeError as exc:
+        assert str(exc) == "callback deleted"
+    else:
+        raise AssertionError("Callback error was not propagated")
+
+    assert fake.terminated

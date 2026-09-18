@@ -8,6 +8,18 @@ from threading import Event
 from video2srt.video.profiles import encoder_args, scale_filter
 
 
+def _stop_process(process: subprocess.Popen[str]) -> None:
+    if process.poll() is not None:
+        process.wait()
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+
+
 def escape_filter_path(path: Path) -> str:
     return str(path.resolve()).replace("\\", "/").replace(":", r"\:").replace("'", r"\'")
 
@@ -65,20 +77,30 @@ def encode(
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
     assert process.stdout is not None
-    while True:
-        if cancel.is_set():
-            process.terminate()
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-            raise InterruptedError("Обработка отменена")
-        line = process.stdout.readline()
-        if not line and process.poll() is not None:
-            break
-        key, _, value = line.strip().partition("=")
-        if key in {"out_time_us", "out_time_ms"} and duration > 0:
-            progress(min(1.0, int(value) / 1_000_000 / duration))
-    if process.returncode:
+    try:
+        while True:
+            if cancel.is_set():
+                raise InterruptedError("Обработка отменена")
+            line = process.stdout.readline()
+            if not line and process.poll() is not None:
+                break
+            key, _, value = line.strip().partition("=")
+            if key in {"out_time_us", "out_time_ms"} and duration > 0:
+                try:
+                    elapsed = int(value)
+                except ValueError:
+                    # FFmpeg may emit out_time_us=N/A near the end of a valid encode.
+                    continue
+                progress(min(1.0, max(0.0, elapsed / 1_000_000 / duration)))
+        returncode = process.wait()
         error = process.stderr.read()[-2000:] if process.stderr else ""
-        raise RuntimeError(f"FFmpeg не смог создать видео. {error}")
+        if returncode:
+            raise RuntimeError(f"FFmpeg не смог создать видео. {error}")
+        progress(1.0)
+    except BaseException:
+        _stop_process(process)
+        raise
+    finally:
+        process.stdout.close()
+        if process.stderr:
+            process.stderr.close()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -18,6 +19,17 @@ from video2srt.video.ffmpeg_service import build_command, encode
 from video2srt.video.probe import VideoInfo, probe_video
 
 ProgressCallback = Callable[[int, str, str], None]
+
+
+def _remove_partial_output(path: Path) -> None:
+    for attempt in range(5):
+        try:
+            path.unlink(missing_ok=True)
+            return
+        except PermissionError:
+            if attempt == 4:
+                raise
+            time.sleep(0.2)
 
 
 @dataclass(frozen=True)
@@ -137,8 +149,7 @@ class Pipeline:
                 self.cancel_event,
             )
         except Exception:
-            if job.video_path.exists():
-                job.video_path.unlink()
+            _remove_partial_output(job.video_path)
             if self.config.video.encoder != "libx264" and not self.cancel_event.is_set():
                 self.logger.warning("Hardware encoder failed; retrying with libx264", exc_info=True)
                 self.config.video.encoder = "libx264"
