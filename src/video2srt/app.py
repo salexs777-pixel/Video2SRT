@@ -9,7 +9,12 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from video2srt import __version__
-from video2srt.core.config import apply_cpu_only_debug_profile, load_config, save_config
+from video2srt.core.config import (
+    apply_cpu_only_debug_profile,
+    apply_cpu_release_constraints,
+    load_config,
+    save_config,
+)
 from video2srt.core.logging import setup_logging
 from video2srt.core.paths import discover_paths
 from video2srt.core.pipeline import Pipeline
@@ -48,11 +53,22 @@ def main() -> int:
     app.setApplicationName("Video2SRT")
     try:
         config = load_config(paths.config / "config.json")
-        if (paths.root / "CPU_ONLY_DEBUG").exists():
+        cpu_only_debug = (paths.root / "CPU_ONLY_DEBUG").exists()
+        cpu_only_release = (paths.root / "CPU_ONLY").exists()
+        if cpu_only_debug:
             apply_cpu_only_debug_profile(config, min(8, os.cpu_count() or 2))
             save_config(config, paths.config / "config.json")
             logger.info("CPU-only debug marker detected; forcing small/cpu/int8/libx264")
-        window = MainWindow(paths, config, Pipeline(paths, config, logger))
+        elif cpu_only_release:
+            apply_cpu_release_constraints(config, min(8, os.cpu_count() or 2))
+            save_config(config, paths.config / "config.json")
+            logger.info("CPU release marker detected; forcing Whisper cpu/int8")
+        window = MainWindow(
+            paths,
+            config,
+            Pipeline(paths, config, logger),
+            cpu_only=cpu_only_debug or cpu_only_release,
+        )
         window.show()
         return app.exec()
     except Exception:

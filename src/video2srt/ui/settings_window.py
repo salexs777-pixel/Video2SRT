@@ -37,7 +37,9 @@ CPU_LARGE_WARNING = (
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, paths: AppPaths, config: AppConfig, redetect, parent=None):
+    def __init__(
+        self, paths: AppPaths, config: AppConfig, redetect, parent=None, cpu_only: bool = False
+    ):
         super().__init__(parent)
         self.paths, self.config = paths, config
         self.setWindowTitle("Настройки")
@@ -57,7 +59,8 @@ class SettingsDialog(QDialog):
             self.model.addItem(label, value)
         self.model.setCurrentIndex(max(0, self.model.findData(config.whisper.model)))
         self.device = QComboBox()
-        self.device.addItem("GPU (NVIDIA CUDA)", "cuda")
+        if not cpu_only:
+            self.device.addItem("GPU (NVIDIA CUDA)", "cuda")
         self.device.addItem("CPU", "cpu")
         self.device.setCurrentIndex(max(0, self.device.findData(config.whisper.device)))
         self.model_note = QLabel()

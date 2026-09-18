@@ -84,3 +84,11 @@ def apply_cpu_only_debug_profile(config: AppConfig, cpu_threads: int) -> None:
         cpu_threads=max(1, cpu_threads),
     )
     config.video = VideoConfig(encoder="libx264")
+
+
+def apply_cpu_release_constraints(config: AppConfig, cpu_threads: int) -> None:
+    """Keep the selected model and video encoder, but always run Whisper on the CPU."""
+    config.hardware.cuda_available = False
+    config.whisper.device = "cpu"
+    config.whisper.compute_type = "int8"
+    config.whisper.cpu_threads = max(1, cpu_threads)

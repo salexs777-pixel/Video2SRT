@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from PySide6.QtCore import QThreadPool
 from PySide6.QtWidgets import QDialog, QLabel, QMessageBox, QProgressBar, QPushButton, QVBoxLayout
 
@@ -11,9 +13,10 @@ from video2srt.workers.task import TaskWorker
 
 
 class FirstRunDialog(QDialog):
-    def __init__(self, paths: AppPaths, config: AppConfig, parent=None):
+    def __init__(self, paths: AppPaths, config: AppConfig, parent=None, cpu_only: bool = False):
         super().__init__(parent)
         self.paths, self.config = paths, config
+        self.cpu_only = cpu_only
         self.setWindowTitle("Первоначальная настройка Video2SRT")
         self.setMinimumWidth(480)
         layout = QVBoxLayout(self)
@@ -30,10 +33,10 @@ class FirstRunDialog(QDialog):
         self.continue_button.setEnabled(False)
         self.continue_button.clicked.connect(self.accept)
         layout.addWidget(self.continue_button)
-        worker = TaskWorker(self._detect)
-        worker.signals.finished.connect(self._complete)
-        worker.signals.failed.connect(self._failed)
-        QThreadPool.globalInstance().start(worker)
+        self.worker = TaskWorker(self._detect)
+        self.worker.signals.finished.connect(self._complete)
+        self.worker.signals.failed.connect(self._failed)
+        QThreadPool.globalInstance().start(self.worker)
 
     def _detect(self, _progress):
         hardware = detect_and_validate(self.paths.executable("ffmpeg"))
@@ -41,6 +44,9 @@ class FirstRunDialog(QDialog):
 
     def _complete(self, result) -> None:
         hardware, profile = result
+        if self.cpu_only:
+            hardware = replace(hardware, cuda_available=False)
+            profile = select_profile(hardware)
         self.config.hardware = hardware
         self.config.whisper = profile.whisper
         self.config.video.encoder = profile.encoder

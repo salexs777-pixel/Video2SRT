@@ -5,6 +5,7 @@ from video2srt.core.config import (
     HardwareConfig,
     WhisperConfig,
     apply_cpu_only_debug_profile,
+    apply_cpu_release_constraints,
     load_config,
     save_config,
 )
@@ -51,3 +52,23 @@ def test_all_whisper_models_are_available_for_manual_selection():
     assert values == ["base", "small", "medium", "large-v3"]
     assert "максимальное качество" in CPU_LARGE_WARNING
     assert "баланс качества и скорости" in MODEL_GUIDANCE["medium"]
+
+
+def test_cpu_release_keeps_manual_model_and_hardware_video_encoder():
+    config = AppConfig(
+        first_run_complete=True,
+        hardware=HardwareConfig(cuda_available=True, qsv_available=True),
+        whisper=WhisperConfig(
+            model="large-v3", device="cuda", compute_type="int8_float16", cpu_threads=2
+        ),
+    )
+    config.video.encoder = "h264_qsv"
+
+    apply_cpu_release_constraints(config, 6)
+
+    assert config.whisper.model == "large-v3"
+    assert config.whisper.device == "cpu"
+    assert config.whisper.compute_type == "int8"
+    assert config.whisper.cpu_threads == 6
+    assert config.video.encoder == "h264_qsv"
+    assert not config.hardware.cuda_available

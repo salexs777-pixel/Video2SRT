@@ -29,9 +29,17 @@ from video2srt.workers.task import TaskWorker
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, paths: AppPaths, config: AppConfig, pipeline: Pipeline):
+    def __init__(
+        self,
+        paths: AppPaths,
+        config: AppConfig,
+        pipeline: Pipeline,
+        cpu_only: bool = False,
+    ):
         super().__init__()
         self.paths, self.config, self.pipeline = paths, config, pipeline
+        self.cpu_only = cpu_only
+        self._workers: set[TaskWorker] = set()
         self.source: Path | None = None
         self.job: Job | None = None
         self.setWindowTitle("Video2SRT")
@@ -97,7 +105,7 @@ class MainWindow(QMainWindow):
     def showEvent(self, event) -> None:
         super().showEvent(event)
         if not self.config.first_run_complete:
-            FirstRunDialog(self.paths, self.config, self).exec()
+            FirstRunDialog(self.paths, self.config, self, cpu_only=self.cpu_only).exec()
             self.mode_label.setText(self._mode_text())
 
     def _mode_text(self) -> str:
@@ -126,7 +134,7 @@ class MainWindow(QMainWindow):
         )
         worker.signals.finished.connect(self._video_probed)
         worker.signals.failed.connect(self._probe_failed)
-        QThreadPool.globalInstance().start(worker)
+        self._start_worker(worker)
 
     @staticmethod
     def _probe_video(path: Path, ffprobe: Path, _progress_callback) -> VideoInfo:
@@ -179,7 +187,7 @@ class MainWindow(QMainWindow):
         worker.signals.progress.connect(self._progress)
         worker.signals.finished.connect(self._srt_ready)
         worker.signals.failed.connect(self._failed)
-        QThreadPool.globalInstance().start(worker)
+        self._start_worker(worker)
 
     def _create_and_transcribe(self, callback):
         callback(5, "Проверка видео", "Чтение параметров файла")
@@ -212,6 +220,17 @@ class MainWindow(QMainWindow):
         worker.signals.progress.connect(self._progress)
         worker.signals.finished.connect(self._complete)
         worker.signals.failed.connect(self._failed)
+        self._start_worker(worker)
+
+    def _start_worker(self, worker: TaskWorker) -> None:
+        """Keep Python signal objects alive for the complete background operation."""
+        self._workers.add(worker)
+        worker.signals.finished.connect(
+            lambda _result, active=worker: self._workers.discard(active)
+        )
+        worker.signals.failed.connect(
+            lambda _message, active=worker: self._workers.discard(active)
+        )
         QThreadPool.globalInstance().start(worker)
 
     def _progress(self, value: int, stage: str, status: str) -> None:
@@ -237,8 +256,12 @@ class MainWindow(QMainWindow):
 
     def settings(self) -> None:
         def redetect():
-            FirstRunDialog(self.paths, self.config, self).exec()
+            FirstRunDialog(
+                self.paths, self.config, self, cpu_only=self.cpu_only
+            ).exec()
             self.mode_label.setText(self._mode_text())
 
-        SettingsDialog(self.paths, self.config, redetect, self).exec()
+        SettingsDialog(
+            self.paths, self.config, redetect, self, cpu_only=self.cpu_only
+        ).exec()
         self.mode_label.setText(self._mode_text())
