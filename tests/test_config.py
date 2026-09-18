@@ -8,6 +8,7 @@ from video2srt.core.config import (
     load_config,
     save_config,
 )
+from video2srt.ui.settings_window import CPU_LARGE_WARNING, MODEL_GUIDANCE, MODEL_OPTIONS
 
 
 def test_config_round_trip(tmp_path: Path):
@@ -42,3 +43,11 @@ def test_cpu_debug_profile_overrides_saved_gpu_profile():
         mode="auto", model="small", device="cpu", compute_type="int8", cpu_threads=6
     )
     assert config.video.encoder == "libx264"
+
+
+def test_all_whisper_models_are_available_for_manual_selection():
+    values = [value for _label, value in MODEL_OPTIONS]
+
+    assert values == ["base", "small", "medium", "large-v3"]
+    assert "максимальное качество" in CPU_LARGE_WARNING
+    assert "баланс качества и скорости" in MODEL_GUIDANCE["medium"]

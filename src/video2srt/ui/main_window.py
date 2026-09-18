@@ -241,3 +241,4 @@ class MainWindow(QMainWindow):
             self.mode_label.setText(self._mode_text())
 
         SettingsDialog(self.paths, self.config, redetect, self).exec()
+        self.mode_label.setText(self._mode_text())
