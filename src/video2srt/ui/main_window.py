@@ -122,11 +122,16 @@ class MainWindow(QMainWindow):
         self.info_label.setText("Чтение параметров видео…")
         self.start_button.setEnabled(False)
         worker = TaskWorker(
-            probe_video, self.source, self.paths.executable("ffprobe")
+            self._probe_video, self.source, self.paths.executable("ffprobe")
         )
         worker.signals.finished.connect(self._video_probed)
         worker.signals.failed.connect(self._probe_failed)
         QThreadPool.globalInstance().start(worker)
+
+    @staticmethod
+    def _probe_video(path: Path, ffprobe: Path, _progress_callback) -> VideoInfo:
+        """Adapt the two-argument probe service to TaskWorker's progress contract."""
+        return probe_video(path, ffprobe)
 
     @staticmethod
     def _video_summary(info: VideoInfo) -> str:
