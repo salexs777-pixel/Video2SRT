@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "video2srt"
+version = "0.1.0"
+description = "Локальное Windows-приложение для создания и вшивания русских субтитров"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = {text = "MIT"}
+dependencies = [
+  "PySide6>=6.8.3,<6.9",
+  "faster-whisper>=1.1,<2",
+  "huggingface-hub>=0.27,<2",
+  "psutil>=6,<8",
+  "pip-system-certs>=4,<6; sys_platform == 'win32'",
+  "nvidia-cublas-cu12>=12,<13; sys_platform == 'win32'",
+  "nvidia-cudnn-cu12>=9,<10; sys_platform == 'win32'",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9", "ruff>=0.9,<1", "pyinstaller>=6.11,<7"]
+
+[project.scripts]
+video2srt = "video2srt.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
